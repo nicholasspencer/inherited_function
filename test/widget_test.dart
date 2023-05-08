@@ -21,15 +21,31 @@ void main() {
     doIt?.call(1);
   });
   testWidgets('inherited function', (WidgetTester tester) async {
+    bool? boolValue;
+    void boolCallback([bool? value]) {
+      boolValue = value;
+    }
+
+    AObject? aObjectValue;
+    void aObjectCallback([AObject? value]) {
+      aObjectValue = value;
+    }
+
     final app = MaterialApp(
       home: InheritedFunction<AObject>(
-        callback: ([value]) {},
+        callback: aObjectCallback,
         child: InheritedFunction<bool>(
-          callback: ([value]) {},
+          callback: boolCallback,
           child: Builder(
             builder: (context) {
-              final callback = InheritedFunction.of<BObject>(context);
-              print(callback);
+              final boolCb = InheritedFunction.of<bool>(context);
+
+              boolCb?.call(true);
+
+              final objCb = InheritedFunction.of<BObject>(context);
+
+              objCb?.call(const BObject('Howdy'));
+
               return const SizedBox.shrink();
             },
           ),
@@ -39,6 +55,10 @@ void main() {
 
     // Build our app and trigger a frame.
     await tester.pumpWidget(app);
+
+    expect(boolValue, isTrue);
+    expect(aObjectValue, isA<BObject>());
+    expect(aObjectValue!.tag, 'Howdy');
   });
 }
 
@@ -87,7 +107,7 @@ class InheritedFunction<T> extends StatefulWidget {
     var state = element?.findAncestorStateOfType<_InheritedFunctionState>();
     var container = state?.container;
 
-    Callback<T>? onResult;
+    Callback<T>? onResult = container?.coerce<T>();
 
     while (state != null &&
         container is! CallbackContainer<T> &&
@@ -97,10 +117,6 @@ class InheritedFunction<T> extends StatefulWidget {
       state = element?.findAncestorStateOfType<_InheritedFunctionState>();
       container = state?.container;
       onResult = container?.coerce<T>();
-    }
-
-    if (onResult != null) {
-      print('Gotcha bitch! $T');
     }
 
     return onResult;
